@@ -1,0 +1,80 @@
+# Changelog entry on merge: after a PR is merged, runs the changelog-generator
+# marketplace plugin to summarize commits since the last tag (or repo root if
+# no tags exist) as a Keep a Changelog-style entry, and posts it as a comment
+# on the merged PR. Read-only — the plugin never modifies repo files. Skippable
+# per-PR via the `skip-ai-skill` label or a `/skip-skill` comment left before
+# merge, checked in a separate gating job so the run job never even starts.
+name: Changelog Entry on Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+jobs:
+  check-skip:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Check skip conditions
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const hasSkipLabel = pr.labels.some(l => l.name === 'skip-ai-skill');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+            });
+            const hasSkipComment = comments.some(c => c.body.includes('/skip-skill'));
+            const skip = hasSkipLabel || hasSkipComment;
+            core.setOutput('skip', skip);
+            core.info(`skip=${skip} (label=${hasSkipLabel}, comment=${hasSkipComment})`);
+
+  run-skill:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install changelog-generator plugin
+        run: |
+          claude plugin marketplace add mrKindly/example-of-marketplace
+          claude plugin install changelog-generator@example-of-marketplace
+
+      - name: Generate changelog entry
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p "Use the changelog-generator plugin to generate a CHANGELOG.md-style entry summarizing commits since the last git tag (or the repository root commit if no tags exist). Follow Keep a Changelog format: group commits under Added/Changed/Fixed/Removed based on Conventional Commit prefixes (feat->Added, fix->Fixed, refactor/chore/perf->Changed, remove/revert->Removed; anything that doesn't match a known prefix goes under Changed verbatim). Each bullet should strip the conventional-commit prefix, capitalize the first letter, end without a period, and append the short commit hash in parentheses, e.g. '- Add changelog command (a1b2c3d)'. If there are no commits since the resolved starting point, state clearly that there is nothing to release and do not fabricate entries. Output only the final markdown entry in a fenced code block, followed by one short sentence naming which starting ref was used (a tag, or 'repository root' if no tags exist). Do not modify any files." \
+            --allowedTools "Bash(git log:*),Bash(git tag:*),Bash(git describe:*),Bash(git rev-list:*),Bash(git branch:*)" \
+            > changelog-entry.md
+          cat changelog-entry.md
+
+      - name: Post changelog entry as PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "${PR_NUMBER}" --body-file changelog-entry.md
