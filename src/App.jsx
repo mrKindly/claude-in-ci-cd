@@ -14,6 +14,7 @@ const INITIAL_DEMO_TASKS = [
     category: 'work',
     priority: 'high',
     completed: false,
+    pinned: true,
     createdAt: Date.now() - 1000000,
     dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
   },
@@ -23,6 +24,7 @@ const INITIAL_DEMO_TASKS = [
     category: 'health',
     priority: 'medium',
     completed: true,
+    pinned: false,
     createdAt: Date.now() - 2000000,
     dueDate: new Date().toISOString().split('T')[0], // Today
   },
@@ -32,6 +34,7 @@ const INITIAL_DEMO_TASKS = [
     category: 'finance',
     priority: 'high',
     completed: false,
+    pinned: false,
     createdAt: Date.now() - 3000000,
     dueDate: new Date(Date.now() + 259200000).toISOString().split('T')[0], // 3 days
   },
@@ -41,6 +44,7 @@ const INITIAL_DEMO_TASKS = [
     category: 'shopping',
     priority: 'low',
     completed: false,
+    pinned: false,
     createdAt: Date.now() - 4000000,
     dueDate: null,
   },
@@ -86,6 +90,7 @@ export default function App() {
       id: Date.now().toString(),
       ...taskData,
       completed: false,
+      pinned: false,
       createdAt: Date.now(),
     };
     setTasks((prev) => [newTask, ...prev]);
@@ -94,6 +99,12 @@ export default function App() {
   const handleToggleTask = (id) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+    );
+  };
+
+  const handleTogglePin = (id) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t))
     );
   };
 
@@ -148,6 +159,9 @@ export default function App() {
   });
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+
     if (sortBy === 'newest') return b.createdAt - a.createdAt;
     if (sortBy === 'oldest') return a.createdAt - b.createdAt;
     if (sortBy === 'title') return a.title.localeCompare(b.title);
@@ -206,6 +220,7 @@ export default function App() {
           tasks={sortedTasks}
           allTasksCount={tasks.length}
           onToggle={handleToggleTask}
+          onTogglePin={handleTogglePin}
           onDelete={handleDeleteTask}
           onUpdate={handleUpdateTask}
           onClearCompleted={handleClearCompleted}

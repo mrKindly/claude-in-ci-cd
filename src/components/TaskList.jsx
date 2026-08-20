@@ -6,6 +6,7 @@ export default function TaskList({
   tasks,
   allTasksCount,
   onToggle,
+  onTogglePin,
   onDelete,
   onUpdate,
   onClearCompleted,
@@ -65,6 +66,7 @@ export default function TaskList({
             key={task.id}
             task={task}
             onToggle={onToggle}
+            onTogglePin={onTogglePin}
             onDelete={onDelete}
             onUpdate={onUpdate}
           />
