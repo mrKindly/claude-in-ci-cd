@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Check, Trash2, Edit3, Calendar, AlertCircle, Tag, Save, X } from 'lucide-react';
+import { Check, Trash2, Edit3, Calendar, AlertCircle, Tag, Save, X, Pin } from 'lucide-react';
 import { CATEGORIES, PRIORITIES } from './TaskInput';
 
-export default function TaskItem({ task, onToggle, onDelete, onUpdate }) {
+export default function TaskItem({ task, onToggle, onTogglePin, onDelete, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editCategory, setEditCategory] = useState(task.category);
@@ -59,6 +59,8 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate }) {
       className={`group relative rounded-2xl border p-4 transition-all duration-300 backdrop-blur-md animate-fade-in ${
         task.completed
           ? 'bg-slate-900/40 border-slate-800/60 text-slate-500'
+          : task.pinned
+          ? 'bg-slate-900/95 border-amber-500/40 text-slate-100 shadow-lg shadow-amber-500/5 hover:border-amber-500/60'
           : 'bg-slate-900/90 border-slate-800 text-slate-100 hover:border-slate-700 hover:shadow-xl hover:shadow-indigo-500/5'
       }`}
     >
@@ -150,6 +152,14 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate }) {
 
               {/* Tags & Badges Row */}
               <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
+                {/* Pinned Badge */}
+                {task.pinned && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border font-semibold text-amber-400 bg-amber-500/10 border-amber-500/30">
+                    <Pin className="w-3 h-3 fill-amber-400" />
+                    Pinned
+                  </span>
+                )}
+
                 {/* Category Badge */}
                 <span
                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md border font-medium ${categoryObj.color}`}
@@ -181,6 +191,17 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate }) {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => onTogglePin(task.id)}
+              title={task.pinned ? 'Unpin task' : 'Pin task to top'}
+              className={`p-1.5 rounded-lg transition-all ${
+                task.pinned
+                  ? 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                  : 'text-slate-400 hover:text-amber-400 hover:bg-amber-500/10'
+              }`}
+            >
+              <Pin className={`w-4 h-4 ${task.pinned ? 'fill-amber-400' : ''}`} />
+            </button>
             <button
               onClick={() => setIsEditing(true)}
               title="Edit Task"
