@@ -132,6 +132,44 @@ export default function App() {
     setTasks(INITIAL_DEMO_TASKS);
   };
 
+  const handleExportTasks = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(tasks, null, 2));
+    const downloadAnchor = document.createElement('a');
+    const filename = `taskpulse_backup_${new Date().toISOString().split('T')[0]}.json`;
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', filename);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleImportTasks = (importedTasks) => {
+    if (!Array.isArray(importedTasks)) {
+      alert('Invalid file format. Expected a JSON array of tasks.');
+      return;
+    }
+    const validTasks = importedTasks.filter(
+      (t) => t && typeof t === 'object' && typeof t.title === 'string'
+    ).map((t) => ({
+      id: t.id || Date.now().toString() + Math.random().toString(36).substring(2, 5),
+      title: t.title,
+      category: t.category || 'work',
+      priority: t.priority || 'medium',
+      completed: Boolean(t.completed),
+      pinned: Boolean(t.pinned),
+      createdAt: t.createdAt || Date.now(),
+      dueDate: t.dueDate || null,
+    }));
+
+    if (validTasks.length === 0) {
+      alert('No valid tasks found in the imported JSON file.');
+      return;
+    }
+
+    setTasks(validTasks);
+    alert(`Successfully imported ${validTasks.length} task(s)!`);
+  };
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
@@ -193,6 +231,8 @@ export default function App() {
           darkMode={darkMode}
           setDarkMode={setDarkMode}
           onClearAll={handleClearAll}
+          onExportTasks={handleExportTasks}
+          onImportTasks={handleImportTasks}
         />
 
         {/* Stats Dashboard */}

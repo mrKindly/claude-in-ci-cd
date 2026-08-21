@@ -1,11 +1,45 @@
-import React from 'react';
-import { CheckCircle2, Moon, Sun, Sparkles, Trash2, ShieldCheck } from 'lucide-react';
+import React, { useRef } from 'react';
+import { CheckCircle2, Moon, Sun, Sparkles, Trash2, ShieldCheck, Download, Upload } from 'lucide-react';
 
-export default function Header({ tasksCount, completedCount, darkMode, setDarkMode, onClearAll }) {
+export default function Header({
+  tasksCount,
+  completedCount,
+  darkMode,
+  setDarkMode,
+  onClearAll,
+  onExportTasks,
+  onImportTasks,
+}) {
   const completionPercentage = tasksCount > 0 ? Math.round((completedCount / tasksCount) * 100) : 0;
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        onImportTasks(parsed);
+      } catch {
+        alert('Could not parse JSON file. Please check file format.');
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <header className="relative z-10 mb-8">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".json"
+        className="hidden"
+      />
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
         <div className="flex items-center gap-3.5">
           <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 shadow-lg shadow-indigo-500/25 ring-1 ring-white/20">
@@ -31,18 +65,38 @@ export default function Header({ tasksCount, completedCount, darkMode, setDarkMo
           </div>
         </div>
 
-        <div className="flex items-center gap-3 self-end sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 self-end sm:self-auto">
           {tasksCount > 0 && (
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300">
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>{completedCount} of {tasksCount} done ({completionPercentage}%)</span>
             </div>
           )}
 
+          {tasksCount > 0 && (
+            <button
+              onClick={onExportTasks}
+              title="Backup / Export tasks to JSON file"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/10 transition-all active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            title="Restore / Import tasks from JSON file"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/10 transition-all active:scale-95"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">Import</span>
+          </button>
+
           <button
             onClick={() => setDarkMode(!darkMode)}
             title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all shadow-sm active:scale-95"
+            className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all shadow-sm active:scale-95"
           >
             {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-400" />}
           </button>
